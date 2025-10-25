@@ -133,8 +133,9 @@ const CONVERSATION_FLOW: ConversationStep[] = [
   },
   {
     id: 5,
-    botMessage: "Alright. Since when have you had this elevated temperature? (e.g., 1 day, 3 hours)",
-    inputType: 'text'
+    botMessage: "Alright. Since when have you had this elevated temperature?",
+    inputType: 'options',
+    options: ['Less than 1 hour', '1-6 hours', '6-12 hours', '12-24 hours', '1-2 days', 'More than 2 days']
   },
   {
     id: 6,
@@ -222,7 +223,14 @@ export function MnemosyneChatbot({ mode, initialSymptoms = [], onBack, username,
                 {
                   id: Date.now(),
                   botMessage: symptomAnalysis.error,
-                  inputType: 'text'
+                  inputType: 'options',
+                  options: [
+                    'Find Healthcare Providers',
+                    'Get Detailed Explanations',
+                    'Learn Self-Care Tips',
+                    'Ask Additional Questions',
+                    'Start New Assessment'
+                  ]
                 }
               ]);
               return;
@@ -257,7 +265,14 @@ Please let me know how I can help further.`;
                 id: Date.now(),
                 botMessage: botResponse,
                 userResponse: `I'm experiencing: ${initialSymptoms.join(", ")}`,
-                inputType: 'text'
+                inputType: 'options',
+                options: [
+                  'Find Healthcare Providers',
+                  'Get Detailed Explanations',
+                  'Learn Self-Care Tips',
+                  'Ask Additional Questions',
+                  'Start New Assessment'
+                ]
               }
             ]);
             
@@ -279,7 +294,14 @@ Please let me know how I can help further.`;
                 botMessage: error instanceof Error 
                   ? error.message 
                   : "I apologize, but I encountered an error while analyzing your symptoms. Please ensure you have set up your API key correctly in the settings.",
-                inputType: 'text'
+                inputType: 'options',
+                options: [
+                  'Find Healthcare Providers',
+                  'Get Detailed Explanations',
+                  'Learn Self-Care Tips',
+                  'Ask Additional Questions',
+                  'Start New Assessment'
+                ]
               }
             ]);
           } finally {
@@ -617,6 +639,88 @@ Please let me know how I can help further.`;
       ...currentStepData,
       userResponse: response
     };
+
+    // Handle button options from analysis response
+    if (response === 'Find Healthcare Providers') {
+      try {
+        const location = await getUserLocation();
+        await findNearbyDoctors(location);
+        updatedHistory.push({
+          id: Date.now(),
+          botMessage: "I've found healthcare providers in your area. Here are the top recommendations:",
+          inputType: 'confirmation'
+        });
+      } catch (error) {
+        updatedHistory.push({
+          id: Date.now(),
+          botMessage: `I couldn't access your location: ${error instanceof Error ? error.message : 'Unknown error'}. You can search for doctors manually using online directories.`,
+          inputType: 'options',
+          options: [
+            'Get Detailed Explanations',
+            'Learn Self-Care Tips',
+            'Ask Additional Questions',
+            'Start New Assessment'
+          ]
+        });
+      }
+    } else if (response === 'Get Detailed Explanations') {
+      updatedHistory.push({
+        id: Date.now(),
+        botMessage: "I can provide detailed explanations about your symptoms and recommendations. What specific aspect would you like me to explain in more detail?",
+        inputType: 'options',
+        options: [
+          'Explain Possible Conditions',
+          'Explain Recommendations',
+          'Explain Next Steps',
+          'Explain Urgency Level',
+          'Back to Main Options'
+        ]
+      });
+    } else if (response === 'Learn Self-Care Tips') {
+      updatedHistory.push({
+        id: Date.now(),
+        botMessage: "Here are specific self-care strategies for your symptoms:\n\n• Rest and avoid strenuous activities\n• Stay hydrated with water and clear fluids\n• Apply heat or cold therapy as appropriate\n• Practice relaxation techniques\n• Monitor your symptoms and note any changes\n• Follow a regular sleep schedule\n• Eat light, easily digestible foods\n• Avoid known triggers if any",
+        inputType: 'options',
+        options: [
+          'Find Healthcare Providers',
+          'Get Detailed Explanations',
+          'Ask Additional Questions',
+          'Start New Assessment'
+        ]
+      });
+    } else if (response === 'Ask Additional Questions') {
+      updatedHistory.push({
+        id: Date.now(),
+        botMessage: "I'm here to help with any questions you might have. What would you like to know more about?",
+        inputType: 'options',
+        options: [
+          'About My Symptoms',
+          'About Treatment Options',
+          'About When to Seek Medical Care',
+          'About Medication Options',
+          'Back to Main Options'
+        ]
+      });
+    } else if (response === 'Start New Assessment') {
+      setCurrentStep(0);
+      setConversationHistory([CONVERSATION_FLOW[0]]);
+      setSymptomAnalysis(null);
+      setShowDoctorsList(false);
+      return;
+    } else if (response === 'Back to Main Options') {
+      updatedHistory.push({
+        id: Date.now(),
+        botMessage: "What would you like to do next?",
+        inputType: 'options',
+        options: [
+          'Find Healthcare Providers',
+          'Get Detailed Explanations',
+          'Learn Self-Care Tips',
+          'Ask Additional Questions',
+          'Start New Assessment'
+        ]
+      });
+    }
 
     // If user selects a symptom domain
     if (currentStep === 0) {
