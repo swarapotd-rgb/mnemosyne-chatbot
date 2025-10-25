@@ -3,6 +3,8 @@ import { OnboardingScreen } from './components/OnboardingScreen';
 import { LoginScreen } from './components/LoginScreen';
 import { MnemosyneChatbot } from './components/MnemosyneChatbot';
 import { DomainSelectionScreen } from './components/DomainSelectionScreen';
+import MedicalHistory from './components/MedicalHistory';
+import PostDiagnosisChat from './components/PostDiagnosisChat';
 
 type Screen = 'onboarding' | 'login' | 'domain-selection' | 'chat';
 type ChatMode = 'pre-diagnosis' | 'post-diagnosis';
@@ -74,13 +76,33 @@ export default function App() {
         />
       )}
       {currentScreen === 'chat' && (
-        <MnemosyneChatbot 
-          mode={chatMode}
-          initialSymptoms={selectedSymptoms}
-          onBack={() => setCurrentScreen(chatMode === 'pre-diagnosis' ? 'domain-selection' : 'login')}
-          username={currentUser}
-          onLogout={handleLogout}
-        />
+        <div className="flex h-screen">
+          <div className="w-1/4 border-r border-gray-200 overflow-y-auto">
+            <MedicalHistory username={currentUser} />
+          </div>
+          <div className="w-3/4">
+            {chatMode === 'pre-diagnosis' ? (
+              <MnemosyneChatbot 
+                mode={chatMode}
+                initialSymptoms={selectedSymptoms}
+                onBack={() => setCurrentScreen('domain-selection')}
+                username={currentUser}
+                onLogout={handleLogout}
+              />
+            ) : (
+              <PostDiagnosisChat
+                username={currentUser}
+                onUpdateHistory={() => {
+                  // Force medical history to refresh
+                  const historyComponent = document.querySelector('.medical-history');
+                  if (historyComponent) {
+                    historyComponent.dispatchEvent(new Event('refresh'));
+                  }
+                }}
+              />
+            )}
+          </div>
+        </div>
       )}
     </>
   );
