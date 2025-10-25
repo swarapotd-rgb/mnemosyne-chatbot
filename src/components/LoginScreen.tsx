@@ -4,6 +4,7 @@ import { Lock, User, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { Checkbox } from './ui/checkbox';
 import { MnemosyneLogo } from './MnemosyneLogo';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 
@@ -21,6 +22,8 @@ export function LoginScreen({ onBack, initialMode = 'signup', onSelectMode, onLo
   const [showPassword, setShowPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(initialMode === 'signup');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAgeVerified, setIsAgeVerified] = useState(false);
+  const [hoveredButton, setHoveredButton] = useState<string | null>(null);
 
   // Simulated user database - in a real app, this would be on the server
   const validateCredentials = (username: string, password: string): boolean => {
@@ -33,6 +36,12 @@ export function LoginScreen({ onBack, initialMode = 'signup', onSelectMode, onLo
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check age verification
+    if (!isAgeVerified) {
+      alert('Please confirm that you are 18 years or older to proceed.');
+      return;
+    }
     
     // Basic validation
     if (!validateCredentials(username, password)) {
@@ -147,15 +156,17 @@ export function LoginScreen({ onBack, initialMode = 'signup', onSelectMode, onLo
               <Button
                 className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white text-xl rounded-xl h-16 shadow-lg shadow-teal-500/30 transition-all duration-300 hover:shadow-xl hover:shadow-teal-500/40 hover:scale-105 button-text"
                 onClick={() => onSelectMode?.('pre-diagnosis')}
+                title="Get Doctor Recommendations, Disease Prediction and Precautions based on Listed Symptoms"
               >
-                Pre-Diagnosis
+                Before Consultation
               </Button>
 
               <Button
                 className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white text-xl rounded-xl h-16 shadow-lg shadow-cyan-500/30 transition-all duration-300 hover:shadow-xl hover:shadow-cyan-500/40 hover:scale-105 button-text"
                 onClick={() => onSelectMode?.('post-diagnosis')}
+                title="Narrate, Store and Refer a Medical History"
               >
-                Post-Diagnosis (Second Opinion)
+                After Consultation
               </Button>
             </motion.div>
 
@@ -287,6 +298,22 @@ export function LoginScreen({ onBack, initialMode = 'signup', onSelectMode, onLo
                     )}
                   </button>
                 </div>
+              </div>
+
+              {/* Age Verification Checkbox */}
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="age-verification"
+                  checked={isAgeVerified}
+                  onCheckedChange={(checked) => setIsAgeVerified(checked as boolean)}
+                  className="border-teal-300 data-[state=checked]:bg-teal-500 data-[state=checked]:border-teal-500"
+                />
+                <Label 
+                  htmlFor="age-verification" 
+                  className="text-teal-900 body-regular cursor-pointer"
+                >
+                  I confirm that I am 18 years or older
+                </Label>
               </div>
 
               {/* Forgot Password - Only show on login */}

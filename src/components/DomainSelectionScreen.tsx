@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { ArrowLeft } from 'lucide-react';
-
+  
 const SYMPTOM_DOMAINS = [
   { 
     id: 'neuro',
-    name: 'Neurological / Mental Symptoms',
+    name: 'Sensory',
     symptoms: ['Headache', 'Dizziness', 'Memory Issues', 'Confusion', 'Numbness/Tingling', 'Migraines', 'Balance Problems', 'Tremors', 'Difficulty Concentrating', 'Speech Difficulties', 'Vision Changes', 'Seizures']
   },
   {
@@ -25,23 +25,18 @@ const SYMPTOM_DOMAINS = [
   },
   {
     id: 'musculo',
-    name: 'Musculoskeletal',
+    name: 'Skeletal',
     symptoms: ['Joint Pain', 'Muscle Pain', 'Back Pain', 'Stiffness', 'Limited Movement', 'Muscle Weakness', 'Swollen Joints', 'Bone Pain', 'Muscle Cramps', 'Reduced Range of Motion', 'Joint Swelling']
   },
   {
     id: 'hormonal',
-    name: 'Hormonal / Endocrine',
+    name: 'Hormonal ',
     symptoms: ['Unusual Thirst', 'Temperature Sensitivity', 'Irregular Periods', 'Hair Loss', 'Weight Gain', 'Mood Swings', 'Hot Flashes', 'Excessive Sweating', 'Fatigue', 'Changes in Sex Drive', 'Irregular Heart Rate']
   },
   {
     id: 'immune',
-    name: 'Immune / Infection Related',
+    name: 'Immune System / Infection',
     symptoms: ['Swollen Glands', 'Rash', 'Recurring Infections', 'Allergic Reactions', 'Fever', 'Joint Pain', 'Skin Problems', 'Frequent Colds', 'Slow Wound Healing', 'Autoimmune Issues', 'Inflammation']
-  },
-  {
-    id: 'emotional',
-    name: 'Emotional / Psychological',
-    symptoms: ['Anxiety', 'Depression', 'Mood Changes', 'Sleep Issues', 'Stress', 'Panic Attacks', 'Social Withdrawal', 'Irritability', 'Loss of Interest', 'Difficulty Concentrating', 'Changes in Appetite']
   }
 ];
 
@@ -84,16 +79,16 @@ export function DomainSelectionScreen({ onAnalyze, onBack }: DomainSelectionScre
         {/* Back Button */}
         {onBack && (
           <div className="mb-6">
-            <button
+            <Button
+              variant="ghost"
               onClick={onBack}
-              className="flex items-center gap-2 text-teal-700 hover:text-teal-900 transition-colors body-regular"
+              className="flex items-center gap-2 text-teal-600 hover:text-teal-700 hover:bg-teal-100 px-4 py-2 rounded-lg transition-colors"
             >
-              <ArrowLeft className="w-5 h-5" />
-              Back
-            </button>
+              <ArrowLeft className="w-4 h-4" />
+              Back to Login
+            </Button>
           </div>
         )}
-        
         {/* Header */}
         <div className="mb-12 text-center">
           <h2 className="text-4xl font-bold text-teal-900 mb-4">

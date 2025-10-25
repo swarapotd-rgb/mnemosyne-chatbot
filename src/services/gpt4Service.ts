@@ -127,13 +127,89 @@ ${parsed.recommendations.map(r => `• ${r}`).join('\n')}`;
     symptomDescription: string,
     patientContext: PatientContext,
     additionalInfo?: string
-  ) {
-    const prompt = `Analyze: "${symptomDescription}"\nContext: ${JSON.stringify(patientContext)}\nFormat:\nASSESSMENT: ...\nURGENCY: ...\nRECOMMENDATIONS:\n- ...`;
-    const res = await this.generateResponse(prompt, [], patientContext, null);
-    const parsed = this.parseAnalysis(res);
-    return { ...parsed, confidence: 75 };
+  ): Promise<{
+    assessment: string;
+    urgencyLevel: 'low' | 'medium' | 'high' | 'emergency';
+    possibleConditions: string[];
+    recommendations: string[];
+    nextSteps: string[];
+  }> {
+    const prompt = `Analyze these symptoms: "${symptomDescription}"
+    
+Additional information: ${additionalInfo || 'None provided'}
+
+Patient context: ${JSON.stringify(patientContext)}
+
+Provide a preliminary assessment in this format:
+ASSESSMENT: [Your assessment]
+URGENCY: [low/medium/high/emergency]
+POSSIBLE_CONDITIONS:
+- [Condition 1]
+- [Condition 2]
+- [Condition 3]
+RECOMMENDATIONS:
+- [Recommendation 1]
+- [Recommendation 2]
+- [Recommendation 3]
+NEXT_STEPS:
+- [Next step 1]
+- [Next step 2]
+- [Next step 3]`;
+
+    try {
+      const response = await this.generateResponse(prompt, [], patientContext, null);
+      
+      // Parse the structured response
+      const lines = response.split('\n');
+      const assessment = lines.find(line => line.startsWith('ASSESSMENT:'))?.replace('ASSESSMENT:', '').trim() || 'Assessment pending';
+      const urgencyMatch = lines.find(line => line.startsWith('URGENCY:'))?.replace('URGENCY:', '').trim();
+      const urgencyLevel = ['low', 'medium', 'high', 'emergency'].includes(urgencyMatch || '') 
+        ? (urgencyMatch as 'low' | 'medium' | 'high' | 'emergency') 
+        : 'medium';
+      
+      // Extract possible conditions
+      const possibleConditionsStart = lines.findIndex(line => line.startsWith('POSSIBLE_CONDITIONS:'));
+      const recommendationsStart = lines.findIndex(line => line.startsWith('RECOMMENDATIONS:'));
+      const nextStepsStart = lines.findIndex(line => line.startsWith('NEXT_STEPS:'));
+      
+      const possibleConditions = lines
+        .slice(possibleConditionsStart + 1, recommendationsStart > 0 ? recommendationsStart : lines.length)
+        .filter(line => line.trim().startsWith('-') || line.trim().startsWith('•'))
+        .map(line => line.replace(/^[-•]\s*/, '').trim())
+        .filter(condition => condition.length > 0);
+
+      const recommendations = lines
+        .slice(recommendationsStart + 1, nextStepsStart > 0 ? nextStepsStart : lines.length)
+        .filter(line => line.trim().startsWith('-') || line.trim().startsWith('•'))
+        .map(line => line.replace(/^[-•]\s*/, '').trim())
+        .filter(rec => rec.length > 0);
+
+      const nextSteps = lines
+        .slice(nextStepsStart + 1)
+        .filter(line => line.trim().startsWith('-') || line.trim().startsWith('•'))
+        .map(line => line.replace(/^[-•]\s*/, '').trim())
+        .filter(step => step.length > 0);
+
+      return {
+        assessment,
+        urgencyLevel,
+        possibleConditions: possibleConditions.length > 0 ? possibleConditions : ['General health concern requiring evaluation'],
+        recommendations: recommendations.length > 0 ? recommendations : ['Consult with a healthcare provider'],
+        nextSteps: nextSteps.length > 0 ? nextSteps : ['Schedule an appointment with your doctor']
+      };
+    } catch (error) {
+      console.error('Error analyzing symptoms:', error);
+      return {
+        assessment: 'Unable to analyze symptoms at this time',
+        urgencyLevel: 'medium',
+        possibleConditions: ['General health concern requiring evaluation'],
+        recommendations: ['Please consult with a healthcare provider'],
+        nextSteps: ['Schedule an appointment with your doctor']
+      };
+    }
   }
 }
 
+// Export singleton instance
 export const gpt4Service = new GPT4Service();
 export { GPT4Service };

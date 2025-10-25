@@ -44,6 +44,9 @@ Assessment: ${analysis.assessment}
 
 Urgency Level: ${analysis.urgencyLevel.toUpperCase()}
 
+Possible Conditions:
+${analysis.possibleConditions.map((condition: string) => `• ${condition}`).join('\n')}
+
 Recommendations:
 ${analysis.recommendations.map((r: string) => `• ${r}`).join('\n')}`;
   }
