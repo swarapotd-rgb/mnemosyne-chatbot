@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { OnboardingScreen } from './components/OnboardingScreen';
 import { LoginScreen } from './components/LoginScreen';
 import { MnemosyneChatbot } from './components/MnemosyneChatbot';
@@ -18,6 +18,21 @@ export default function App() {
     setCurrentUser(null);
     setCurrentScreen('onboarding');
   };
+
+  // Scroll to top whenever the screen changes
+  useEffect(() => {
+    // Scroll to top with smooth behavior, fallback for older browsers
+    try {
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: 'smooth'
+      });
+    } catch (error) {
+      // Fallback for browsers that don't support smooth scrolling
+      window.scrollTo(0, 0);
+    }
+  }, [currentScreen]);
 
   return (
     <>
