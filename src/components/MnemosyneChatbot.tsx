@@ -86,7 +86,7 @@ interface Doctor {
 }
 
 const SYMPTOM_DOMAINS = [
-  { id: 'neuro', emoji: '🧠', name: 'Neurological / Mental Symptoms', 
+  { id: 'neuro', emoji: '🧠', name: 'Sensory', 
     commonSymptoms: ['Headache', 'Dizziness', 'Memory Issues', 'Confusion', 'Numbness/Tingling'] },
   { id: 'cardio', emoji: '💓', name: 'Cardiovascular / Respiratory',
     commonSymptoms: ['Chest Pain', 'Shortness of Breath', 'Heart Palpitations', 'Persistent Cough'] },
@@ -94,14 +94,12 @@ const SYMPTOM_DOMAINS = [
     commonSymptoms: ['Fever', 'Fatigue', 'Body Aches', 'Night Sweats', 'Weight Changes'] },
   { id: 'digestive', emoji: '💩', name: 'Digestive System',
     commonSymptoms: ['Nausea', 'Stomach Pain', 'Diarrhea', 'Constipation', 'Loss of Appetite'] },
-  { id: 'musculo', emoji: '💀', name: 'Musculoskeletal',
+  { id: 'musculo', emoji: '💀', name: 'Skeletal',
     commonSymptoms: ['Joint Pain', 'Muscle Pain', 'Back Pain', 'Stiffness', 'Limited Movement'] },
-  { id: 'hormonal', emoji: '🧍‍♀️', name: 'Hormonal / Endocrine',
+  { id: 'hormonal', emoji: '🧍‍♀️', name: 'Hormonal',
     commonSymptoms: ['Unusual Thirst', 'Temperature Sensitivity', 'Irregular Periods', 'Hair Loss'] },
-  { id: 'immune', emoji: '🩸', name: 'Immune / Infection Related',
+  { id: 'immune', emoji: '🩸', name: 'Immune System/ Infection',
     commonSymptoms: ['Swollen Glands', 'Rash', 'Recurring Infections', 'Allergic Reactions'] },
-  { id: 'emotional', emoji: '😔', name: 'Emotional / Psychological',
-    commonSymptoms: ['Anxiety', 'Depression', 'Mood Changes', 'Sleep Issues', 'Stress'] },
   { id: 'other', emoji: '❓', name: 'Other Symptoms',
     commonSymptoms: [] }
 ];
@@ -216,17 +214,18 @@ export function MnemosyneChatbot({ mode, initialSymptoms = [], onBack, username,
             );
 
             // Check if there was an error during analysis
-            if (symptomAnalysis.error) {
+            if (symptomAnalysis?.error) {
               setConversationHistory(prev => [
                 ...prev,
                 {
                   id: Date.now(),
-                  botMessage: symptomAnalysis.error,
+                  botMessage: symptomAnalysis.error || 'An error occurred during analysis',
                   inputType: 'text'
                 }
               ]);
               return;
             }
+            
             
             const botResponse = `Based on the symptoms you've described (${initialSymptoms.join(", ")}), here's my analysis:
 
@@ -256,7 +255,6 @@ Please let me know how I can help further.`;
               {
                 id: Date.now(),
                 botMessage: botResponse,
-                userResponse: `I'm experiencing: ${initialSymptoms.join(", ")}`,
                 inputType: 'text'
               }
             ]);
@@ -267,7 +265,7 @@ Please let me know how I can help further.`;
               duration: "unspecified",
               associatedSymptoms: initialSymptoms.slice(1),
               triggers: [],
-              confidence: 85, // Default confidence
+              confidence: 85, // Default confidence level
               urgencyLevel: symptomAnalysis.urgencyLevel
             });
           } catch (error) {
@@ -561,46 +559,23 @@ Please let me know how I can help further.`;
   // Generate GPT-4 enhanced response
   const generateGPT4Response = async (userInput: string): Promise<string> => {
     if (!isGPT4Enabled) {
-      return "GPT-4 integration is not enabled. Please add your Gemini API key in settings for more intelligent responses.";
+      return "GPT-4 integration is not enabled. Please add your OpenAI API key in settings for more intelligent responses.";
     }
 
     try {
       setIsGeneratingResponse(true);
-      
-      // Use the new analyzeSymptoms method for structured responses
-      const analysis = await aiService.analyzeSymptoms(
+      const gptResponse = await aiService.generateResponse(
         userInput,
+        conversationHistory.map(step => ({
+          botMessage: step.botMessage,
+          userResponse: step.userResponse
+        })),
         patientContext,
-        conversationHistory.map(step => step.userResponse).join(' ')
+        symptomAnalysis
       );
-
-      // Format the response with the new structure
-      const formattedResponse = `Based on your symptoms, here's my analysis:
-
-Assessment: ${analysis.assessment}
-
-Urgency Level: ${analysis.urgencyLevel.toUpperCase()}
-
-Possible Conditions:
-${analysis.possibleConditions?.map(condition => `• ${condition}`).join("\n") || "• General health concern requiring evaluation"}
-
-Possible Precautions:
-${analysis.possiblePrecautions?.map(precaution => `• ${precaution}`).join("\n") || "• Monitor symptoms closely"}
-
-Specialist to Consider:
-${analysis.specialistToConsider?.map(specialist => `• ${specialist}`).join("\n") || "• General Practitioner"}
-
-Would you like me to:
-1. Explain any of these recommendations in more detail
-2. Find healthcare providers in your area
-3. Provide self-care tips
-4. Ask me additional questions about your symptoms
-
-Please let me know how I can help further.`;
-
-      return formattedResponse;
+      return gptResponse;
     } catch (error) {
-      console.error('AI Service Error:', error);
+      console.error('GPT-4 Error:', error);
       return `I apologize, but I encountered an error with the AI service: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again or check your API key settings.`;
     } finally {
       setIsGeneratingResponse(false);
