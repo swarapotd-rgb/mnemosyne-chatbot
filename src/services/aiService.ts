@@ -13,6 +13,7 @@ interface GeminiResponse {
         text: string;
       }>;
     };
+    finishReason: string;
   }>;
 }
 
@@ -39,10 +40,10 @@ class AIService {
   private apiKey: string;
   private model: string;
   private baseUrl: string = 'https://generativelanguage.googleapis.com/v1beta/models';
-  private useMockResponses = true; // Set to true for development without API
+  private useMockResponses = false; // Set to false to use Gemini API
 
   constructor(apiKey?: string) {
-    this.apiKey = apiKey || import.meta.env.VITE_GEMINI_API_KEY || '';
+    this.apiKey = apiKey || '';
     this.model = 'gemini-pro';
   }
 
@@ -51,15 +52,20 @@ class AIService {
 
 Assessment: ${analysis.assessment}
 
-Confidence Level: ${analysis.confidence}%
 Urgency Level: ${analysis.urgencyLevel.toUpperCase()}
+
+Possible Conditions:
+${analysis.possibleConditions.map((condition: string) => `• ${condition}`).join('\n')}
 
 Recommendations:
 ${analysis.recommendations.map((rec: string) => `• ${rec}`).join('\n')}
 
+Next Steps:
+${analysis.nextSteps.map((step: string) => `• ${step}`).join('\n')}
+
 Would you like me to:
-1. Explain any of these recommendations in more detail
-2. Find healthcare providers in your area
+1. Find healthcare providers in your area
+2. Explain any of these recommendations in more detail
 3. Provide self-care tips
 4. Ask additional questions about your symptoms
 
@@ -82,9 +88,9 @@ Please let me know how I can help further.`;
             }
           ],
           generationConfig: {
-            temperature: 0.7,
+            temperature: 0.8,
             topK: 40,
-            topP: 1,
+            topP: 0.95,
             maxOutputTokens: 2048,
           },
           safetySettings: [
@@ -110,11 +116,22 @@ Please let me know how I can help further.`;
 
       if (!response.ok) {
         const error = await response.json();
+        console.error('Gemini API Error Response:', error);
         throw new Error(`Gemini API error: ${error.error?.message || 'Unknown error'}`);
       }
 
       const data: GeminiResponse = await response.json();
-      return data.candidates[0]?.content?.parts[0]?.text || 'I apologize, but I could not generate a response.';
+      
+      if (!data.candidates || data.candidates.length === 0) {
+        throw new Error('No response generated from Gemini API');
+      }
+
+      const candidate = data.candidates[0];
+      if (candidate.finishReason === 'SAFETY') {
+        throw new Error('Response blocked by safety filters');
+      }
+
+      return candidate.content?.parts[0]?.text || 'I apologize, but I could not generate a response.';
     } catch (error: any) {
       console.error('Gemini API Error:', error);
       throw error;
@@ -255,67 +272,209 @@ Return only the questions, one per line.`;
     additionalInfo?: string
   ): Promise<{
     assessment: string;
-    confidence: number;
     urgencyLevel: 'low' | 'medium' | 'high' | 'emergency';
-    recommendations: string[];
+    possibleConditions: string[];
+    possiblePrecautions: string[];
+    specialistToConsider: string[];
     error?: string;
   }> {
     if (this.useMockResponses || !this.apiKey) {
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
       
       const symptoms = symptomDescription.toLowerCase();
-      if (symptoms.includes('fever')) {
-        return mockResponses.symptomAnalysis.fever;
-      } else if (symptoms.includes('headache')) {
-        return mockResponses.symptomAnalysis.headache;
+      
+      // Enhanced symptom detection with more specific conditions
+      if (symptoms.includes('fever') || symptoms.includes('temperature') || symptoms.includes('hot')) {
+        return {
+          assessment: mockResponses.symptomAnalysis.fever.assessment,
+          urgencyLevel: mockResponses.symptomAnalysis.fever.urgencyLevel,
+          possibleConditions: mockResponses.symptomAnalysis.fever.possibleConditions,
+          possiblePrecautions: mockResponses.symptomAnalysis.fever.recommendations,
+          specialistToConsider: ['General Practitioner', 'Internal Medicine', 'Infectious Disease Specialist']
+        };
+      } else if (symptoms.includes('headache') || symptoms.includes('head pain') || symptoms.includes('migraine')) {
+        return {
+          assessment: mockResponses.symptomAnalysis.headache.assessment,
+          urgencyLevel: mockResponses.symptomAnalysis.headache.urgencyLevel,
+          possibleConditions: mockResponses.symptomAnalysis.headache.possibleConditions,
+          possiblePrecautions: mockResponses.symptomAnalysis.headache.recommendations,
+          specialistToConsider: ['General Practitioner', 'Neurologist', 'Headache Specialist']
+        };
+      } else if (symptoms.includes('chest pain') || symptoms.includes('chest discomfort') || symptoms.includes('heart pain')) {
+        return {
+          assessment: mockResponses.symptomAnalysis.chestPain.assessment,
+          urgencyLevel: mockResponses.symptomAnalysis.chestPain.urgencyLevel,
+          possibleConditions: mockResponses.symptomAnalysis.chestPain.possibleConditions,
+          possiblePrecautions: mockResponses.symptomAnalysis.chestPain.recommendations,
+          specialistToConsider: ['Emergency Medicine', 'Cardiologist', 'General Practitioner']
+        };
+      } else if (symptoms.includes('shortness of breath') || symptoms.includes('difficulty breathing') || symptoms.includes('breathing problem')) {
+        return {
+          assessment: mockResponses.symptomAnalysis.shortnessOfBreath.assessment,
+          urgencyLevel: mockResponses.symptomAnalysis.shortnessOfBreath.urgencyLevel,
+          possibleConditions: mockResponses.symptomAnalysis.shortnessOfBreath.possibleConditions,
+          possiblePrecautions: mockResponses.symptomAnalysis.shortnessOfBreath.recommendations,
+          specialistToConsider: ['Pulmonologist', 'Emergency Medicine', 'General Practitioner']
+        };
+      } else if (symptoms.includes('stomach pain') || symptoms.includes('abdominal pain') || symptoms.includes('belly pain') || symptoms.includes('nausea')) {
+        return {
+          assessment: mockResponses.symptomAnalysis.abdominalPain.assessment,
+          urgencyLevel: mockResponses.symptomAnalysis.abdominalPain.urgencyLevel,
+          possibleConditions: mockResponses.symptomAnalysis.abdominalPain.possibleConditions,
+          possiblePrecautions: mockResponses.symptomAnalysis.abdominalPain.recommendations,
+          specialistToConsider: ['Gastroenterologist', 'General Practitioner', 'Emergency Medicine']
+        };
+      } else if (symptoms.includes('dizziness') || symptoms.includes('vertigo') || symptoms.includes('lightheaded')) {
+        return {
+          assessment: "Dizziness can have various causes ranging from inner ear problems to cardiovascular issues.",
+          urgencyLevel: "medium" as const,
+          possibleConditions: [
+            "Benign paroxysmal positional vertigo (BPPV)",
+            "Vestibular neuritis",
+            "Low blood pressure",
+            "Anxiety or panic disorder",
+            "Dehydration",
+            "Medication side effects"
+          ],
+          possiblePrecautions: [
+            "Sit or lie down when dizzy",
+            "Stay hydrated",
+            "Avoid sudden head movements",
+            "Get up slowly from sitting/lying",
+            "Avoid driving or operating machinery"
+          ],
+          specialistToConsider: ['Neurologist', 'ENT Specialist', 'General Practitioner', 'Cardiologist']
+        };
+      } else if (symptoms.includes('fatigue') || symptoms.includes('tired') || symptoms.includes('exhausted') || symptoms.includes('weakness')) {
+        return {
+          assessment: "Fatigue can be caused by various factors including lifestyle, medical conditions, or mental health issues.",
+          urgencyLevel: "low" as const,
+          possibleConditions: [
+            "Sleep disorders",
+            "Anemia",
+            "Thyroid problems",
+            "Depression or anxiety",
+            "Chronic fatigue syndrome",
+            "Diabetes",
+            "Vitamin deficiencies"
+          ],
+          possiblePrecautions: [
+            "Maintain regular sleep schedule",
+            "Eat balanced meals",
+            "Stay hydrated",
+            "Exercise regularly",
+            "Manage stress",
+            "Avoid excessive caffeine"
+          ],
+          specialistToConsider: ['General Practitioner', 'Endocrinologist', 'Sleep Medicine Specialist', 'Psychiatrist']
+        };
+      } else if (symptoms.includes('cough') || symptoms.includes('coughing') || symptoms.includes('persistent cough')) {
+        return {
+          assessment: "A persistent cough can indicate various respiratory or other conditions.",
+          urgencyLevel: "medium" as const,
+          possibleConditions: [
+            "Upper respiratory infection",
+            "Bronchitis",
+            "Asthma",
+            "Post-nasal drip",
+            "GERD (acid reflux)",
+            "Pneumonia",
+            "Allergies"
+          ],
+          possiblePrecautions: [
+            "Stay hydrated",
+            "Use humidifier",
+            "Avoid irritants (smoke, dust)",
+            "Elevate head while sleeping",
+            "Gargle with salt water",
+            "Avoid lying down after eating"
+          ],
+          specialistToConsider: ['Pulmonologist', 'General Practitioner', 'ENT Specialist', 'Allergist']
+        };
       } else {
-        return mockResponses.symptomAnalysis.default;
+        return {
+          assessment: mockResponses.symptomAnalysis.default.assessment,
+          urgencyLevel: mockResponses.symptomAnalysis.default.urgencyLevel,
+          possibleConditions: mockResponses.symptomAnalysis.default.possibleConditions,
+          possiblePrecautions: mockResponses.symptomAnalysis.default.recommendations,
+          specialistToConsider: ['General Practitioner', 'Internal Medicine']
+        };
       }
     }
 
     try {
-      const prompt = `Analyze the following symptoms and provide a structured assessment. Consider patient context and medical history. Be conservative in assessment and always recommend professional medical consultation for concerning symptoms.
+      const prompt = `You are a medical AI assistant. Analyze the following symptoms and provide a structured assessment. Be conservative and always recommend professional medical consultation.
 
 Symptoms: ${symptomDescription}
 Additional Info: ${additionalInfo || 'None provided'}
 Patient Context: ${JSON.stringify(patientContext)}
 
-Required response format:
-ASSESSMENT: [Clear description of analysis]
-CONFIDENCE: [Percentage 0-100]
+Provide your response in this EXACT format:
+ASSESSMENT: [Brief assessment of the symptoms]
 URGENCY: [low/medium/high/emergency]
-RECOMMENDATIONS:
-- [First recommendation]
-- [Additional recommendations]`;
+POSSIBLE_CONDITIONS:
+- [Condition 1]
+- [Condition 2]
+- [Condition 3]
+POSSIBLE_PRECAUTIONS:
+- [Precaution 1]
+- [Precaution 2]
+- [Precaution 3]
+SPECIALIST_TO_CONSIDER:
+- [Specialist 1]
+- [Specialist 2]
+- [Specialist 3]
+
+Important: Be specific and varied in your responses. Don't repeat the same generic advice. Consider the specific symptoms mentioned and provide relevant, actionable information.`;
 
       const response = await this.generateGeminiResponse([prompt]);
       const lines = response.split('\n');
 
       // Parse the structured response
       const assessment = lines.find(line => line.startsWith('ASSESSMENT:'))?.replace('ASSESSMENT:', '').trim() || 'Assessment pending';
-      const confidenceMatch = lines.find(line => line.startsWith('CONFIDENCE:'))?.match(/\d+/);
-      const confidence = confidenceMatch ? parseInt(confidenceMatch[0]) : 50;
       const urgencyMatch = lines.find(line => line.startsWith('URGENCY:'))?.replace('URGENCY:', '').trim().toLowerCase();
       const urgencyLevel = ['low', 'medium', 'high', 'emergency'].includes(urgencyMatch || '') 
         ? (urgencyMatch as 'low' | 'medium' | 'high' | 'emergency') 
         : 'medium';
-      const recommendations = lines
+      
+      // Extract possible conditions
+      const possibleConditionsStart = lines.findIndex(line => line.startsWith('POSSIBLE_CONDITIONS:'));
+      const precautionsStart = lines.findIndex(line => line.startsWith('POSSIBLE_PRECAUTIONS:'));
+      const specialistStart = lines.findIndex(line => line.startsWith('SPECIALIST_TO_CONSIDER:'));
+      
+      const possibleConditions = lines
+        .slice(possibleConditionsStart + 1, precautionsStart > 0 ? precautionsStart : lines.length)
         .filter(line => line.trim().startsWith('-') || line.trim().startsWith('•'))
-        .map(line => line.replace(/^[-•]\s*/, '').trim());
+        .map(line => line.replace(/^[-•]\s*/, '').trim())
+        .filter(condition => condition.length > 0);
+
+      const possiblePrecautions = lines
+        .slice(precautionsStart + 1, specialistStart > 0 ? specialistStart : lines.length)
+        .filter(line => line.trim().startsWith('-') || line.trim().startsWith('•'))
+        .map(line => line.replace(/^[-•]\s*/, '').trim())
+        .filter(precaution => precaution.length > 0);
+
+      const specialistToConsider = lines
+        .slice(specialistStart + 1)
+        .filter(line => line.trim().startsWith('-') || line.trim().startsWith('•'))
+        .map(line => line.replace(/^[-•]\s*/, '').trim())
+        .filter(specialist => specialist.length > 0);
 
       return {
         assessment,
-        confidence,
         urgencyLevel,
-        recommendations: recommendations.length > 0 ? recommendations : ['Consult with a healthcare provider']
+        possibleConditions: possibleConditions.length > 0 ? possibleConditions : ['General health concern requiring evaluation'],
+        possiblePrecautions: possiblePrecautions.length > 0 ? possiblePrecautions : ['Monitor symptoms closely', 'Consult with a healthcare provider'],
+        specialistToConsider: specialistToConsider.length > 0 ? specialistToConsider : ['General Practitioner']
       };
     } catch (error: any) {
       console.error('Error analyzing symptoms:', error);
       return {
         assessment: 'Unable to analyze symptoms at this time',
-        confidence: 0,
         urgencyLevel: 'medium',
-        recommendations: ['Please consult with a healthcare provider'],
+        possibleConditions: ['General health concern requiring evaluation'],
+        possiblePrecautions: ['Please consult with a healthcare provider'],
+        specialistToConsider: ['General Practitioner'],
         error: error.message
       };
     }

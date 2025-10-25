@@ -119,7 +119,7 @@ const SYMPTOM_DATABASE: Record<string, Record<string, SymptomAnalysis>> = {
       urgency: 'Seek immediate medical attention for severe chest pain'
     },
     'Shortness of breath': {
-      possibleConditions: ['Asthma', 'Anxiety', 'COPD', 'Heart failure', 'Pneumonia'],
+      possibleConditions: ['Asthma', 'Anxiety', 'COPD', 'Heart failure', 'Pneumonia', 'Pulmonary embolism', 'Anemia'],
       recommendations: {
         homeRemedies: [
           'Sit upright and lean forward slightly',
@@ -150,6 +150,74 @@ const SYMPTOM_DATABASE: Record<string, Record<string, SymptomAnalysis>> = {
       },
       confidence: 85,
       urgency: 'Seek immediate medical attention if severe'
+    },
+    'Persistent cough': {
+      possibleConditions: ['Post-nasal drip', 'GERD', 'Asthma', 'Bronchitis', 'Pneumonia', 'COPD', 'Allergies'],
+      recommendations: {
+        homeRemedies: [
+          'Stay hydrated with warm liquids',
+          'Use a humidifier or steam inhalation',
+          'Honey and lemon tea',
+          'Avoid irritants like smoke and dust',
+          'Sleep with head elevated'
+        ],
+        overTheCounterMedicines: [
+          'Cough suppressants (Dextromethorphan)',
+          'Expectorants (Guaifenesin)',
+          'Antihistamines for allergies',
+          'Throat lozenges'
+        ],
+        whenToSeeDoctor: [
+          'Cough lasting more than 3 weeks',
+          'Cough with blood or thick mucus',
+          'Fever with persistent cough',
+          'Shortness of breath with cough',
+          'Chest pain with coughing'
+        ],
+        generalAdvice: [
+          'Avoid smoking and secondhand smoke',
+          'Maintain good indoor air quality',
+          'Practice good hand hygiene',
+          'Consider allergy testing if persistent'
+        ],
+        severity: 'medium'
+      },
+      confidence: 80,
+      urgency: 'See doctor if cough persists or worsens'
+    },
+    'High blood pressure': {
+      possibleConditions: ['Hypertension', 'Stress', 'Obesity', 'Kidney disease', 'Thyroid problems', 'Sleep apnea'],
+      recommendations: {
+        homeRemedies: [
+          'Practice deep breathing exercises',
+          'Reduce sodium intake',
+          'Maintain regular exercise routine',
+          'Practice stress management techniques',
+          'Get adequate sleep'
+        ],
+        overTheCounterMedicines: [
+          'Consult doctor before taking any medications',
+          'Consider magnesium supplements (with doctor approval)',
+          'Omega-3 fatty acids may help'
+        ],
+        whenToSeeDoctor: [
+          'Blood pressure consistently above 140/90',
+          'Severe headaches with high blood pressure',
+          'Chest pain or shortness of breath',
+          'Vision changes',
+          'Dizziness or fainting'
+        ],
+        generalAdvice: [
+          'Monitor blood pressure regularly',
+          'Maintain healthy weight',
+          'Limit alcohol and caffeine',
+          'Follow DASH diet principles',
+          'Regular medical checkups'
+        ],
+        severity: 'high'
+      },
+      confidence: 90,
+      urgency: 'Seek medical attention for high blood pressure readings'
     }
   },
   systemic: {
@@ -233,15 +301,68 @@ export class SymptomAnalysisService {
       return this.getDefaultAnalysis();
     }
 
-    // For now, analyze the first symptom (can be enhanced to analyze multiple)
-    const primarySymptom = symptoms[0];
-    const analysis = domainData[primarySymptom];
-    
-    if (analysis) {
-      return analysis;
+    // Analyze all symptoms and combine possible conditions
+    const allPossibleConditions: string[] = [];
+    const allRecommendations: SymptomRecommendation = {
+      homeRemedies: [],
+      overTheCounterMedicines: [],
+      whenToSeeDoctor: [],
+      generalAdvice: [],
+      severity: 'low'
+    };
+
+    let maxSeverity: 'low' | 'medium' | 'high' | 'emergency' = 'low';
+    let maxConfidence = 0;
+    let combinedUrgency = 'Monitor symptoms and consult healthcare provider if needed';
+
+    // Process each symptom
+    for (const symptom of symptoms) {
+      const analysis = domainData[symptom];
+      if (analysis) {
+        // Combine possible conditions
+        allPossibleConditions.push(...analysis.possibleConditions);
+        
+        // Combine recommendations
+        allRecommendations.homeRemedies.push(...analysis.recommendations.homeRemedies);
+        allRecommendations.overTheCounterMedicines.push(...analysis.recommendations.overTheCounterMedicines);
+        allRecommendations.whenToSeeDoctor.push(...analysis.recommendations.whenToSeeDoctor);
+        allRecommendations.generalAdvice.push(...analysis.recommendations.generalAdvice);
+        
+        // Track highest severity and confidence
+        if (this.getSeverityLevel(analysis.recommendations.severity) > this.getSeverityLevel(maxSeverity)) {
+          maxSeverity = analysis.recommendations.severity;
+        }
+        if (analysis.confidence > maxConfidence) {
+          maxConfidence = analysis.confidence;
+          combinedUrgency = analysis.urgency;
+        }
+      }
     }
 
-    return this.getDefaultAnalysis();
+    // Remove duplicates and return combined analysis
+    const uniqueConditions = [...new Set(allPossibleConditions)];
+    const uniqueHomeRemedies = [...new Set(allRecommendations.homeRemedies)];
+    const uniqueOTC = [...new Set(allRecommendations.overTheCounterMedicines)];
+    const uniqueWhenToSeeDoctor = [...new Set(allRecommendations.whenToSeeDoctor)];
+    const uniqueGeneralAdvice = [...new Set(allRecommendations.generalAdvice)];
+
+    return {
+      possibleConditions: uniqueConditions.length > 0 ? uniqueConditions : ['General health concern requiring evaluation'],
+      recommendations: {
+        homeRemedies: uniqueHomeRemedies,
+        overTheCounterMedicines: uniqueOTC,
+        whenToSeeDoctor: uniqueWhenToSeeDoctor,
+        generalAdvice: uniqueGeneralAdvice,
+        severity: maxSeverity
+      },
+      confidence: maxConfidence,
+      urgency: combinedUrgency
+    };
+  }
+
+  private static getSeverityLevel(severity: 'low' | 'medium' | 'high' | 'emergency'): number {
+    const levels = { low: 1, medium: 2, high: 3, emergency: 4 };
+    return levels[severity] || 1;
   }
 
   static getDefaultAnalysis(): SymptomAnalysis {
