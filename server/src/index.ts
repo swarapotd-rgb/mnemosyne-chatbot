@@ -23,6 +23,11 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+// Handle favicon.ico requests
+app.get('/favicon.ico', (req, res) => {
+    res.status(204).end(); // No content response for favicon
+});
+
 // Routes
 app.use('/api/medical-records', medicalRecordsRouter);
 

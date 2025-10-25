@@ -10,6 +10,21 @@ router.post('/', async (req, res) => {
     try {
         const { userId, journeyDescription } = req.body;
 
+        // Input validation
+        if (!userId || !journeyDescription) {
+            return res.status(400).json({
+                error: 'Missing required fields',
+                message: 'Both userId and journeyDescription are required'
+            });
+        }
+
+        if (typeof journeyDescription !== 'string' || journeyDescription.trim().length === 0) {
+            return res.status(400).json({
+                error: 'Invalid journeyDescription',
+                message: 'Journey description must be a non-empty string'
+            });
+        }
+
         // Process the journey using Gemini
         const processedData = await processMedicalJourney(journeyDescription);
 
@@ -50,8 +65,25 @@ router.post('/', async (req, res) => {
 router.get('/user/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
+        
+        if (!userId) {
+            return res.status(400).json({
+                error: 'Missing userId',
+                message: 'User ID is required'
+            });
+        }
+
+        // Validate userId format if needed
+        if (typeof userId !== 'string' || userId.trim().length === 0) {
+            return res.status(400).json({
+                error: 'Invalid userId',
+                message: 'User ID must be a non-empty string'
+            });
+        }
+
         const records = await MedicalRecord.find({ userId })
-            .sort({ timestamp: -1 });
+            .sort({ timestamp: -1 })
+            .select('-__v') // Exclude version key
 
         // Decrypt data for each record
         const decryptedRecords = records.map(record => ({
