@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { ArrowLeft } from 'lucide-react';
-
+  
 const SYMPTOM_DOMAINS = [
   { 
     id: 'neuro',
