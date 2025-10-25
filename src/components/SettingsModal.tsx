@@ -4,7 +4,7 @@ import { Settings, Key, Eye, EyeOff, Save, X } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { gpt4Service } from '../services/gpt4Service';
+import { aiService } from '../services/aiService';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -40,7 +40,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       localStorage.setItem('openai_api_key', apiKey);
       
       // Set in GPT-4 service
-      gpt4Service.setApiKey(apiKey);
+      aiService.setApiKey(apiKey);
       
       setMessage('API key saved successfully! GPT-4 integration is now active.');
     } catch (error) {
@@ -53,7 +53,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const handleClear = () => {
     setApiKey('');
     localStorage.removeItem('openai_api_key');
-    gpt4Service.setApiKey('');
+    aiService.setApiKey('');
     setMessage('API key cleared.');
   };
 

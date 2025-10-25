@@ -25,7 +25,7 @@ import { MnemosyneLogo } from './MnemosyneLogo';
 import { LogoutButton } from './LogoutButton';
 import { SettingsModal } from './SettingsModal';
 import { LanguageTranslator } from './LanguageTranslator';
-import { gpt4Service } from '../services/gpt4Service';
+import { aiService } from '../services/aiService';
 
 interface ChatInterfaceProps {
   mode: 'pre-diagnosis' | 'post-diagnosis';
@@ -210,10 +210,23 @@ export function MnemosyneChatbot({ mode, initialSymptoms = [], onBack, username,
             setIsGeneratingResponse(true);
             
             // Get detailed analysis from GPT-4
-            const symptomAnalysis = await gpt4Service.analyzeSymptoms(
+            const symptomAnalysis = await aiService.analyzeSymptoms(
               initialSymptoms.join(", "),
               patientContext
             );
+
+            // Check if there was an error during analysis
+            if (symptomAnalysis.error) {
+              setConversationHistory(prev => [
+                ...prev,
+                {
+                  id: Date.now(),
+                  botMessage: symptomAnalysis.error,
+                  inputType: 'text'
+                }
+              ]);
+              return;
+            }
             
             const botResponse = `Based on the symptoms you've described (${initialSymptoms.join(", ")}), here's my analysis:
 
@@ -258,7 +271,9 @@ Please let me know how I can help further.`;
               ...prev,
               {
                 id: Date.now(),
-                botMessage: "I apologize, but I encountered an error while analyzing your symptoms. Please try describing your symptoms again, or check your API key settings.",
+                botMessage: error instanceof Error 
+                  ? error.message 
+                  : "I apologize, but I encountered an error while analyzing your symptoms. Please ensure you have set up your API key correctly in the settings.",
                 inputType: 'text'
               }
             ]);
@@ -268,11 +283,26 @@ Please let me know how I can help further.`;
         }
       }
       
-      // Check if GPT-4 API key is available
+      // Check if API key is available and valid
       const apiKey = localStorage.getItem('openai_api_key');
-      setIsGPT4Enabled(!!apiKey);
       if (apiKey) {
-        gpt4Service.setApiKey(apiKey);
+        aiService.setApiKey(apiKey);
+        // Test the API key with a simple request
+        try {
+          await aiService.generateResponse(
+            "test",
+            [],
+            { chronicConditions: [], medications: [], medicalHistory: [] },
+            null
+          );
+          setIsGPT4Enabled(true);
+        } catch (error) {
+          console.error('API key validation error:', error);
+          setIsGPT4Enabled(false);
+          localStorage.removeItem('openai_api_key'); // Clear invalid API key
+        }
+      } else {
+        setIsGPT4Enabled(false);
       }
     };
 
@@ -531,7 +561,7 @@ Please let me know how I can help further.`;
 
     try {
       setIsGeneratingResponse(true);
-      const gptResponse = await gpt4Service.generateResponse(
+      const gptResponse = await aiService.generateResponse(
         userInput,
         conversationHistory.map(step => ({
           botMessage: step.botMessage,

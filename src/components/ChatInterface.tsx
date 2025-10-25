@@ -21,7 +21,7 @@ import { LogoutButton } from './LogoutButton';
 import { LanguageTranslator } from './LanguageTranslator';
 import { GeolocationPermission } from './GeolocationPermission';
 import { googleMapsService } from '../services/googleMapsService';
-import { gpt4Service } from '../services/gpt4Service';
+import { aiService } from '../services/aiService';
 
 type ChatMode = 'pre-diagnosis' | 'post-diagnosis';
 
@@ -504,7 +504,7 @@ export function ChatInterface({ mode, onBack, username, onLogout }: ChatInterfac
         userResponse: msg.role === 'user' ? msg.content : undefined
       })).filter(msg => msg.botMessage || msg.userResponse);
 
-      const gpt4Response = await gpt4Service.generateResponse(
+      const aiResponse = await aiService.generateResponse(
         userInput,
         conversationHistory,
         patientContext,
@@ -522,7 +522,7 @@ export function ChatInterface({ mode, onBack, username, onLogout }: ChatInterfac
       return {
         id: generateUniqueId('assistant'),
         role: 'assistant',
-        content: gpt4Response,
+        content: aiResponse,
         timestamp: new Date(),
         symptomData,
         riskAssessment,
