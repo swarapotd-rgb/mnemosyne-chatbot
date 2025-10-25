@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Button } from './ui/button';
+import { ArrowLeft } from 'lucide-react';
 
 const SYMPTOM_DOMAINS = [
   { 
@@ -46,9 +47,10 @@ const SYMPTOM_DOMAINS = [
 
 interface DomainSelectionScreenProps {
   onAnalyze: (symptoms: string[]) => void;
+  onBack?: () => void;
 }
 
-export function DomainSelectionScreen({ onAnalyze }: DomainSelectionScreenProps) {
+export function DomainSelectionScreen({ onAnalyze, onBack }: DomainSelectionScreenProps) {
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
 
@@ -79,6 +81,19 @@ export function DomainSelectionScreen({ onAnalyze }: DomainSelectionScreenProps)
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 via-cyan-50 to-blue-50 px-6 py-8">
       <div className="max-w-2xl mx-auto">
+        {/* Back Button */}
+        {onBack && (
+          <div className="mb-6">
+            <button
+              onClick={onBack}
+              className="flex items-center gap-2 text-teal-700 hover:text-teal-900 transition-colors body-regular"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              Back
+            </button>
+          </div>
+        )}
+        
         {/* Header */}
         <div className="mb-12 text-center">
           <h2 className="text-4xl font-bold text-teal-900 mb-4">

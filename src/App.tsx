@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { OnboardingScreen } from './components/OnboardingScreen';
 import { LoginScreen } from './components/LoginScreen';
 import { MnemosyneChatbot } from './components/MnemosyneChatbot';
@@ -55,6 +55,7 @@ export default function App() {
             setSelectedSymptoms(symptoms);
             setCurrentScreen('chat');
           }}
+          onBack={() => setCurrentScreen('login')}
         />
       )}
       {currentScreen === 'chat' && (
