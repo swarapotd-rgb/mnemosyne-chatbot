@@ -46,6 +46,7 @@ export default function App() {
             }
           }}
           onLogin={(username) => setCurrentUser(username)}
+          currentUser={currentUser}
         />
       )}
       {currentScreen === 'domain-selection' && (

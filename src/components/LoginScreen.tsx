@@ -12,9 +12,10 @@ interface LoginScreenProps {
   initialMode?: 'signup' | 'signin';
   onSelectMode?: (mode: 'pre-diagnosis' | 'post-diagnosis') => void;
   onLogin?: (username: string) => void;
+  currentUser?: string | null;
 }
 
-export function LoginScreen({ onBack, initialMode = 'signup', onSelectMode, onLogin }: LoginScreenProps) {
+export function LoginScreen({ onBack, initialMode = 'signup', onSelectMode, onLogin, currentUser }: LoginScreenProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -84,7 +85,7 @@ export function LoginScreen({ onBack, initialMode = 'signup', onSelectMode, onLo
   };
 
   // If user is logged in, show diagnosis selection
-  if (isLoggedIn) {
+  if (isLoggedIn || currentUser) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-teal-50 via-cyan-50 to-blue-50 flex items-center justify-center p-6">
         <div className="w-full max-w-2xl">

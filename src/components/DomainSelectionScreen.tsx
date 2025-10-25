@@ -93,12 +93,12 @@ export function DomainSelectionScreen({ onAnalyze }: DomainSelectionScreenProps)
 
         {/* Domain Selection */}
         {!selectedDomain && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="flex flex-col items-center space-y-4 w-full">
             {SYMPTOM_DOMAINS.map(domain => (
               <Button
                 key={domain.id}
                 variant="outline"
-                className="h-auto p-6 flex items-center text-left transform transition-all duration-300 hover:-translate-y-2 hover:shadow-xl border-2 hover:border-teal-500 bg-white rounded-xl"
+                className="w-full max-w-2xl h-auto p-6 flex items-center justify-center text-center transform transition-all duration-300 hover:-translate-y-2 hover:shadow-xl border-2 hover:border-teal-500 bg-white rounded-xl"
                 onClick={() => handleDomainSelect(domain.id)}
               >
                 <span className="text-xl font-semibold text-teal-900 py-2">{domain.name}</span>
