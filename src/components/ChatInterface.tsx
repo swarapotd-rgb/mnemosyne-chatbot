@@ -20,6 +20,7 @@ import { MnemosyneLogo } from './MnemosyneLogo';
 import { LogoutButton } from './LogoutButton';
 import { LanguageTranslator } from './LanguageTranslator';
 import { GeolocationPermission } from './GeolocationPermission';
+import { NearbyDoctors } from './NearbyDoctors';
 import { googleMapsService } from '../services/googleMapsService';
 import { aiService } from '../services/aiService';
 
@@ -83,6 +84,13 @@ interface Message {
   riskAssessment?: RiskAssessment;
   followUpQuestions?: string[];
   confidenceScore?: number;
+  symptomAnalysis?: {
+    assessment: string;
+    urgencyLevel: 'low' | 'medium' | 'high' | 'emergency';
+    possibleConditions: string[];
+    possiblePrecautions: string[];
+    specialistToConsider: string[];
+  };
 }
 
 interface ChatInterfaceProps {
@@ -504,6 +512,14 @@ export function ChatInterface({ mode, onBack, username, onLogout }: ChatInterfac
         userResponse: msg.role === 'user' ? msg.content : undefined
       })).filter(msg => msg.botMessage || msg.userResponse);
 
+      // First analyze symptoms to get structured response
+      const symptomAnalysis = await aiService.analyzeSymptoms(
+        userInput,
+        patientContext,
+        `Severity: ${symptomData.severity}/10, Duration: ${symptomData.duration}, Associated symptoms: ${symptomData.associatedSymptoms.join(', ')}, Triggers: ${symptomData.triggers.join(', ')}`
+      );
+
+      // Generate conversational response
       const aiResponse = await aiService.generateResponse(
         userInput,
         conversationHistory,
@@ -514,8 +530,8 @@ export function ChatInterface({ mode, onBack, username, onLogout }: ChatInterfac
           duration: symptomData.duration,
           associatedSymptoms: symptomData.associatedSymptoms,
           triggers: symptomData.triggers,
-          confidence: riskAssessment.confidence,
-          urgencyLevel: riskAssessment.urgencyLevel
+          confidence: 0, // Remove confidence from new format
+          urgencyLevel: symptomAnalysis.urgencyLevel
         }
       );
 
@@ -525,8 +541,14 @@ export function ChatInterface({ mode, onBack, username, onLogout }: ChatInterfac
         content: aiResponse,
         timestamp: new Date(),
         symptomData,
-        riskAssessment,
-        confidenceScore: riskAssessment.confidence
+        riskAssessment: {
+          score: riskAssessment.score,
+          confidence: 0, // Remove confidence from new format
+          urgencyLevel: symptomAnalysis.urgencyLevel,
+          recommendedAction: symptomAnalysis.assessment
+        },
+        confidenceScore: 0, // Remove confidence from new format
+        symptomAnalysis: symptomAnalysis // Add new structured analysis
       };
 
     } catch (error) {
@@ -792,28 +814,13 @@ export function ChatInterface({ mode, onBack, username, onLogout }: ChatInterfac
                 <X className="w-4 h-4" />
               </Button>
             </div>
-            {isLoadingDoctors ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="flex gap-2">
-                  <span className="w-2 h-2 bg-teal-400 rounded-full animate-bounce" />
-                  <span className="w-2 h-2 bg-teal-400 rounded-full animate-bounce [animation-delay:0.2s]" />
-                  <span className="w-2 h-2 bg-teal-400 rounded-full animate-bounce [animation-delay:0.4s]" />
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  {nearbyDoctors.map(doctor => (
-                    <DoctorCard key={doctor.id} doctor={doctor} />
-                  ))}
-                </div>
-                <div 
-                  ref={mapRef} 
-                  className="w-full h-64 bg-gray-100 rounded-lg"
-                  // This would integrate with a mapping service like Google Maps
-                />
-              </>
-            )}
+            <NearbyDoctors 
+              symptoms={messages.filter(m => m.role === 'user').map(m => m.content)}
+              onDoctorSelect={(doctor) => {
+                console.log('Doctor selected:', doctor);
+                // Handle doctor selection
+              }}
+            />
           </div>
         </div>
       )}
@@ -846,6 +853,75 @@ export function ChatInterface({ mode, onBack, username, onLogout }: ChatInterfac
                   }`}
                 >
                   <p className="body-regular whitespace-pre-line">{message.content}</p>
+                  
+                  {/* New structured response format */}
+                  {message.symptomAnalysis && (
+                    <div className="mt-4 space-y-3">
+                      <div className="bg-teal-50 border border-teal-200 rounded-lg p-4">
+                        <h4 className="font-semibold text-teal-900 mb-2">Assessment</h4>
+                        <p className="text-sm text-teal-800">{message.symptomAnalysis.assessment}</p>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <h5 className="font-medium text-blue-900 mb-2">Possible Conditions</h5>
+                          <ul className="text-sm text-blue-800 space-y-1">
+                            {message.symptomAnalysis.possibleConditions?.map((condition, index) => (
+                              <li key={index} className="flex items-start">
+                                <span className="text-blue-600 mr-2">•</span>
+                                <span>{condition}</span>
+                              </li>
+                            )) || []}
+                          </ul>
+                        </div>
+                        
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                          <h5 className="font-medium text-green-900 mb-2">Possible Precautions</h5>
+                          <ul className="text-sm text-green-800 space-y-1">
+                            {message.symptomAnalysis.possiblePrecautions?.map((precaution, index) => (
+                              <li key={index} className="flex items-start">
+                                <span className="text-green-600 mr-2">•</span>
+                                <span>{precaution}</span>
+                              </li>
+                            )) || []}
+                          </ul>
+                        </div>
+                        
+                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                          <h5 className="font-medium text-orange-900 mb-2">Specialist to Consider</h5>
+                          <ul className="text-sm text-orange-800 space-y-1">
+                            {message.symptomAnalysis.specialistToConsider?.map((specialist, index) => (
+                              <li key={index} className="flex items-start">
+                                <span className="text-orange-600 mr-2">•</span>
+                                <span>{specialist}</span>
+                              </li>
+                            )) || []}
+                          </ul>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                          message.symptomAnalysis.urgencyLevel === 'emergency' ? 'bg-red-100 text-red-800' :
+                          message.symptomAnalysis.urgencyLevel === 'high' ? 'bg-orange-100 text-orange-800' :
+                          message.symptomAnalysis.urgencyLevel === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-green-100 text-green-800'
+                        }`}>
+                          Urgency: {message.symptomAnalysis.urgencyLevel.toUpperCase()}
+                        </span>
+                        
+                        {/* Nearby Doctors Button */}
+                        <Button
+                          onClick={() => setShowDoctorsList(true)}
+                          className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white text-sm px-4 py-2"
+                        >
+                          <MapPin className="w-4 h-4 mr-2" />
+                          Find Nearby Doctors
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
                   {message.attachments?.map((attachment, index) => (
                     <div key={index} className="mt-2">
                       {attachment.type === 'image' && (
@@ -860,23 +936,6 @@ export function ChatInterface({ mode, onBack, username, onLogout }: ChatInterfac
                   {message.role === 'assistant' && (
                     <div className="mt-3 flex items-center justify-end">
                       <LanguageTranslator text={message.content} />
-                    </div>
-                  )}
-                  {message.confidenceScore !== undefined && (
-                    <div className="mt-2 text-xs opacity-75">
-                      Confidence: {Math.round(message.confidenceScore)}%
-                    </div>
-                  )}
-                  {message.riskAssessment && (
-                    <div className="mt-2 text-xs">
-                      <span className={`inline-block px-2 py-1 rounded ${
-                        message.riskAssessment.urgencyLevel === 'emergency' ? 'bg-red-100 text-red-800' :
-                        message.riskAssessment.urgencyLevel === 'high' ? 'bg-orange-100 text-orange-800' :
-                        message.riskAssessment.urgencyLevel === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-green-100 text-green-800'
-                      }`}>
-                        {message.riskAssessment.urgencyLevel.toUpperCase()}
-                      </span>
                     </div>
                   )}
                   <p className={`text-xs mt-2 ${

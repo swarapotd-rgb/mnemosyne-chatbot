@@ -234,10 +234,14 @@ Assessment: ${symptomAnalysis.assessment}
 
 Urgency Level: ${symptomAnalysis.urgencyLevel.toUpperCase()}
 
-Recommendations:
-${symptomAnalysis.recommendations.map(rec => `• ${rec}`).join("\n")}
+Possible Conditions:
+${symptomAnalysis.possibleConditions?.map(condition => `• ${condition}`).join("\n") || "• General health concern requiring evaluation"}
 
-Confidence Level: ${symptomAnalysis.confidence}%
+Possible Precautions:
+${symptomAnalysis.possiblePrecautions?.map(precaution => `• ${precaution}`).join("\n") || "• Monitor symptoms closely"}
+
+Specialist to Consider:
+${symptomAnalysis.specialistToConsider?.map(specialist => `• ${specialist}`).join("\n") || "• General Practitioner"}
 
 Would you like me to:
 1. Explain any of these recommendations in more detail
@@ -252,6 +256,7 @@ Please let me know how I can help further.`;
               {
                 id: Date.now(),
                 botMessage: botResponse,
+                userResponse: `I'm experiencing: ${initialSymptoms.join(", ")}`,
                 inputType: 'text'
               }
             ]);
@@ -262,7 +267,7 @@ Please let me know how I can help further.`;
               duration: "unspecified",
               associatedSymptoms: initialSymptoms.slice(1),
               triggers: [],
-              confidence: symptomAnalysis.confidence,
+              confidence: 85, // Default confidence
               urgencyLevel: symptomAnalysis.urgencyLevel
             });
           } catch (error) {
@@ -556,23 +561,46 @@ Please let me know how I can help further.`;
   // Generate GPT-4 enhanced response
   const generateGPT4Response = async (userInput: string): Promise<string> => {
     if (!isGPT4Enabled) {
-      return "GPT-4 integration is not enabled. Please add your OpenAI API key in settings for more intelligent responses.";
+      return "GPT-4 integration is not enabled. Please add your Gemini API key in settings for more intelligent responses.";
     }
 
     try {
       setIsGeneratingResponse(true);
-      const gptResponse = await aiService.generateResponse(
+      
+      // Use the new analyzeSymptoms method for structured responses
+      const analysis = await aiService.analyzeSymptoms(
         userInput,
-        conversationHistory.map(step => ({
-          botMessage: step.botMessage,
-          userResponse: step.userResponse
-        })),
         patientContext,
-        symptomAnalysis
+        conversationHistory.map(step => step.userResponse).join(' ')
       );
-      return gptResponse;
+
+      // Format the response with the new structure
+      const formattedResponse = `Based on your symptoms, here's my analysis:
+
+Assessment: ${analysis.assessment}
+
+Urgency Level: ${analysis.urgencyLevel.toUpperCase()}
+
+Possible Conditions:
+${analysis.possibleConditions?.map(condition => `• ${condition}`).join("\n") || "• General health concern requiring evaluation"}
+
+Possible Precautions:
+${analysis.possiblePrecautions?.map(precaution => `• ${precaution}`).join("\n") || "• Monitor symptoms closely"}
+
+Specialist to Consider:
+${analysis.specialistToConsider?.map(specialist => `• ${specialist}`).join("\n") || "• General Practitioner"}
+
+Would you like me to:
+1. Explain any of these recommendations in more detail
+2. Find healthcare providers in your area
+3. Provide self-care tips
+4. Ask me additional questions about your symptoms
+
+Please let me know how I can help further.`;
+
+      return formattedResponse;
     } catch (error) {
-      console.error('GPT-4 Error:', error);
+      console.error('AI Service Error:', error);
       return `I apologize, but I encountered an error with the AI service: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again or check your API key settings.`;
     } finally {
       setIsGeneratingResponse(false);

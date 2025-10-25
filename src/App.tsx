@@ -54,6 +54,7 @@ export default function App() {
             setSelectedSymptoms(symptoms);
             setCurrentScreen('chat');
           }}
+          onBack={() => setCurrentScreen('login')}
         />
       )}
       {currentScreen === 'chat' && (
