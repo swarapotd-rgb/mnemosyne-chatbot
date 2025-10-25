@@ -1,9 +1,8 @@
-// Mock responses for development without API access
+// src/services/mockResponses.ts
 const mockResponses = {
   symptomAnalysis: {
     fever: {
       assessment: "Your symptoms suggest a possible fever. This could be due to various causes including viral or bacterial infections.",
-      confidence: 75,
       urgencyLevel: "medium" as const,
       recommendations: [
         "Monitor your temperature regularly",
@@ -15,7 +14,6 @@ const mockResponses = {
     },
     headache: {
       assessment: "You appear to be experiencing a headache. This could range from a tension headache to a migraine.",
-      confidence: 70,
       urgencyLevel: "low" as const,
       recommendations: [
         "Rest in a quiet, dark room",
@@ -27,7 +25,6 @@ const mockResponses = {
     },
     default: {
       assessment: "Based on the symptoms described, a medical evaluation may be needed for proper diagnosis.",
-      confidence: 60,
       urgencyLevel: "medium" as const,
       recommendations: [
         "Monitor your symptoms",
@@ -44,7 +41,7 @@ const mockResponses = {
       "How long have you been experiencing these symptoms?",
       "Have you noticed any patterns or triggers?"
     ],
-    emergencyWarning: "⚠️ Based on your symptoms, you should seek immediate medical attention. Please contact emergency services or go to the nearest emergency room."
+    emergencyWarning: "Based on your symptoms, you should seek immediate medical attention. Please contact emergency services or go to the nearest emergency room."
   }
 };
 
