@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { ArrowLeft } from 'lucide-react';
-
+  
 const SYMPTOM_DOMAINS = [
   { 
     id: 'neuro',
-    name: 'Neurological / Mental Symptoms',
+    name: 'Sensory',
     symptoms: ['Headache', 'Dizziness', 'Memory Issues', 'Confusion', 'Numbness/Tingling', 'Migraines', 'Balance Problems', 'Tremors', 'Difficulty Concentrating', 'Speech Difficulties', 'Vision Changes', 'Seizures']
   },
   {
@@ -25,23 +25,18 @@ const SYMPTOM_DOMAINS = [
   },
   {
     id: 'musculo',
-    name: 'Musculoskeletal',
+    name: 'Skeletal',
     symptoms: ['Joint Pain', 'Muscle Pain', 'Back Pain', 'Stiffness', 'Limited Movement', 'Muscle Weakness', 'Swollen Joints', 'Bone Pain', 'Muscle Cramps', 'Reduced Range of Motion', 'Joint Swelling']
   },
   {
     id: 'hormonal',
-    name: 'Hormonal / Endocrine',
+    name: 'Hormonal ',
     symptoms: ['Unusual Thirst', 'Temperature Sensitivity', 'Irregular Periods', 'Hair Loss', 'Weight Gain', 'Mood Swings', 'Hot Flashes', 'Excessive Sweating', 'Fatigue', 'Changes in Sex Drive', 'Irregular Heart Rate']
   },
   {
     id: 'immune',
-    name: 'Immune / Infection Related',
+    name: 'Immune System / Infection',
     symptoms: ['Swollen Glands', 'Rash', 'Recurring Infections', 'Allergic Reactions', 'Fever', 'Joint Pain', 'Skin Problems', 'Frequent Colds', 'Slow Wound Healing', 'Autoimmune Issues', 'Inflammation']
-  },
-  {
-    id: 'emotional',
-    name: 'Emotional / Psychological',
-    symptoms: ['Anxiety', 'Depression', 'Mood Changes', 'Sleep Issues', 'Stress', 'Panic Attacks', 'Social Withdrawal', 'Irritability', 'Loss of Interest', 'Difficulty Concentrating', 'Changes in Appetite']
   }
 ];
 
@@ -94,7 +89,6 @@ export function DomainSelectionScreen({ onAnalyze, onBack }: DomainSelectionScre
             </Button>
           </div>
         )}
-
         {/* Header */}
         <div className="mb-12 text-center">
           <h2 className="text-4xl font-bold text-teal-900 mb-4">
@@ -109,12 +103,12 @@ export function DomainSelectionScreen({ onAnalyze, onBack }: DomainSelectionScre
 
         {/* Domain Selection */}
         {!selectedDomain && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="flex flex-col items-center space-y-4 w-full">
             {SYMPTOM_DOMAINS.map(domain => (
               <Button
                 key={domain.id}
                 variant="outline"
-                className="h-auto p-6 flex items-center text-left transform transition-all duration-300 hover:-translate-y-2 hover:shadow-xl border-2 hover:border-teal-500 bg-white rounded-xl"
+                className="w-full max-w-2xl h-auto p-6 flex items-center justify-center text-center transform transition-all duration-300 hover:-translate-y-2 hover:shadow-xl border-2 hover:border-teal-500 bg-white rounded-xl"
                 onClick={() => handleDomainSelect(domain.id)}
               >
                 <span className="text-xl font-semibold text-teal-900 py-2">{domain.name}</span>
